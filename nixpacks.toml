@@ -1,0 +1,5 @@
+[providers]
+php = "php83"
+
+[phases.setup]
+nixPkgs = ["php83", "php83Packages.composer"]
