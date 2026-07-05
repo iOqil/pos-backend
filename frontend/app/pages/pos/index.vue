@@ -212,7 +212,7 @@ const handlePaymentConfirm = async (paymentData) => {
             ]"
           >
             <div class="w-full aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg mb-3 flex items-center justify-center text-gray-400 overflow-hidden shrink-0 relative">
-              <img v-if="product.image" :src="`http://localhost:8000/storage/${product.image}`" class="w-full h-full object-cover" :alt="product.name" />
+              <img v-if="product.image" :src="`/storage/${product.image}`" class="w-full h-full object-cover" :alt="product.name" />
               <span v-else class="text-xs">Rasm yo'q</span>
 
               <div v-if="product.stock_quantity <= 0" class="absolute inset-0 bg-white/50 dark:bg-black/50 backdrop-blur-[2px] flex items-center justify-center z-10">

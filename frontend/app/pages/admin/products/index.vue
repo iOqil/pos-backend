@@ -92,7 +92,7 @@ const openEdit = (product) => {
   form.value = { ...product };
   isEditing.value = true;
   selectedImage.value = null;
-  imagePreview.value = product.image ? `http://localhost:8000/storage/${product.image}` : null;
+  imagePreview.value = product.image ? `/storage/${product.image}` : null;
   showModal.value = true;
 };
 
