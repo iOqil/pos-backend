@@ -2,15 +2,16 @@
 import { ref } from 'vue';
 import { useAuthStore } from '~/stores/auth';
 import { navigateTo } from '#app';
-import { LogIn } from 'lucide-vue-next';
+import { LogIn, Eye, EyeOff } from 'lucide-vue-next';
 
 definePageMeta({
   layout: false
 });
 
 const authStore = useAuthStore();
-const email = ref('admin@example.com'); // Admin default
-const password = ref('password');
+const email = ref('');
+const password = ref('');
+const showPassword = ref(false);
 const errorMsg = ref('');
 const isLoading = ref(false);
 
@@ -57,14 +58,18 @@ const handleLogin = async () => {
           <div>
             <label class="block text-sm font-medium text-gray-700">Email manzili</label>
             <div class="mt-1">
-              <input v-model="email" type="email" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+              <input v-model="email" type="email" placeholder="admin@example.com" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
             </div>
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700">Parol</label>
-            <div class="mt-1">
-              <input v-model="password" type="password" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+            <div class="mt-1 relative">
+              <input v-model="password" :type="showPassword ? 'text' : 'password'" placeholder="********" required class="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm pr-10">
+              <button type="button" @click="showPassword = !showPassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
+                <Eye v-if="!showPassword" class="h-5 w-5" />
+                <EyeOff v-else class="h-5 w-5" />
+              </button>
             </div>
           </div>
 

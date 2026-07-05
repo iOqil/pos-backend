@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue';
 import { useApi } from '~/composables/useApi';
-import { Plus, Edit2, Trash2, X, CheckCircle2, Search, ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { Plus, Edit2, Trash2, X, CheckCircle2, Search, ChevronLeft, ChevronRight, Eye, EyeOff } from 'lucide-vue-next';
 import { useToast } from '~/composables/useToast';
 
 definePageMeta({ layout: 'admin' });
@@ -42,6 +42,7 @@ onMounted(() => fetchUsers());
 const showModal = ref(false);
 const isEditing = ref(false);
 const form = ref({ id: null, name: '', email: '', password: '', role: 'cashier' });
+const showPassword = ref(false);
 
 const openCreate = () => {
   form.value = { id: null, name: '', email: '', password: '', role: 'cashier' };
@@ -203,7 +204,13 @@ const deleteUser = async (id) => {
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Parol {{ isEditing ? '(O\'zgartirish uchun)' : '' }}</label>
-            <input v-model="form.password" :required="!isEditing" type="password" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none">
+            <div class="relative">
+              <input v-model="form.password" :required="!isEditing" :type="showPassword ? 'text' : 'password'" placeholder="********" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none pr-10">
+              <button type="button" @click="showPassword = !showPassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
+                <Eye v-if="!showPassword" class="h-5 w-5" />
+                <EyeOff v-else class="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
           <div>

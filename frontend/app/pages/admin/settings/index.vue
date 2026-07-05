@@ -1,8 +1,18 @@
 <script setup>
 import { ref } from 'vue';
-import { Store, Printer, Bell, Shield, CheckCircle2 } from 'lucide-vue-next';
+import { Store, Printer, Bell, Shield, CheckCircle2, Eye, EyeOff } from 'lucide-vue-next';
+import { useAuthStore } from '~/stores/auth';
 
 definePageMeta({ layout: 'admin' });
+
+const authStore = useAuthStore();
+const showCurrentPassword = ref(false);
+const showNewPassword = ref(false);
+
+const securityForm = ref({
+  currentPassword: '',
+  newPassword: ''
+});
 
 const activeTab = ref('general');
 
@@ -98,8 +108,32 @@ const saveSettings = () => {
           </div>
 
           <div v-if="activeTab === 'security'" class="pb-2">
-            <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><Shield class="w-5 h-5 text-gray-500"/> Xavfsizlik</h3>
-            <p class="text-sm text-gray-500">Qo'shimcha xavfsizlik sozlamalari bu yerda joylashadi.</p>
+            <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2"><Shield class="w-5 h-5 text-gray-500"/> Xavfsizlik va Parol</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Joriy parol</label>
+                <div class="relative">
+                  <input v-model="securityForm.currentPassword" :type="showCurrentPassword ? 'text' : 'password'" placeholder="********" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none pr-10">
+                  <button type="button" @click="showCurrentPassword = !showCurrentPassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
+                    <Eye v-if="!showCurrentPassword" class="h-5 w-5" />
+                    <EyeOff v-else class="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Yangi parol</label>
+                <div class="relative">
+                  <input v-model="securityForm.newPassword" :type="showNewPassword ? 'text' : 'password'" placeholder="Yangi parol..." class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:outline-none pr-10">
+                  <button type="button" @click="showNewPassword = !showNewPassword" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
+                    <Eye v-if="!showNewPassword" class="h-5 w-5" />
+                    <EyeOff v-else class="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+            
           </div>
 
           <div class="flex justify-end pt-4 border-t border-gray-100 mt-auto">
