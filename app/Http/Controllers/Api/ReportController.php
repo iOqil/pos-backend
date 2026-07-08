@@ -14,7 +14,25 @@ class ReportController extends Controller
         $date = $request->query('date', date('Y-m-d'));
         $salesCount = Sale::whereDate('created_at', $date)->where('status', 'completed')->count();
         $total = Sale::whereDate('created_at', $date)->where('status', 'completed')->sum('total');
-        return response()->json(['date' => $date, 'total_revenue' => $total, 'sales_count' => $salesCount]);
+        
+        $cashTotal = \App\Models\Payment::whereDate('created_at', $date)
+                        ->whereHas('sale', function($q) { $q->where('status', 'completed'); })
+                        ->where('method', 'cash')->sum('amount');
+        $cashChange = \App\Models\Payment::whereDate('created_at', $date)
+                        ->whereHas('sale', function($q) { $q->where('status', 'completed'); })
+                        ->where('method', 'cash')->sum('change_amount');
+                        
+        $cardTotal = \App\Models\Payment::whereDate('created_at', $date)
+                        ->whereHas('sale', function($q) { $q->where('status', 'completed'); })
+                        ->where('method', 'card')->sum('amount');
+
+        return response()->json([
+            'date' => $date, 
+            'total_revenue' => $total, 
+            'sales_count' => $salesCount,
+            'cash_revenue' => $cashTotal - $cashChange,
+            'card_revenue' => $cardTotal
+        ]);
     }
     #[OA\Get(path: "/api/reports/products", summary: "Detailed product sales report", security: [["sanctum" => []]], tags: ["Reports"])]
     #[OA\Response(response: 200, description: "Report generated")]
