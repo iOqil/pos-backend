@@ -81,6 +81,15 @@ class ProductController extends Controller
     #[OA\Response(response: 204, description: "Deleted")]
     public function destroy($id) { Product::destroy($id); return response()->json(null, 204); }
 
+    #[OA\Delete(path: "/api/products/bulk", summary: "Bulk delete products", security: [["sanctum" => []]], tags: ["Products"])]
+    public function bulkDestroy(Request $request) {
+        $ids = $request->ids;
+        if (!empty($ids)) {
+            Product::whereIn('id', $ids)->delete();
+        }
+        return response()->json(null, 204);
+    }
+
     #[OA\Get(path: "/api/products/barcode/{barcode}", summary: "Find by barcode", tags: ["Products"])]
     #[OA\PathParameter(name: "barcode", required: true, schema: new OA\Schema(type: "string"))]
     #[OA\Response(response: 200, description: "Found")]

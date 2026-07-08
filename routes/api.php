@@ -28,6 +28,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Write access for products, categories, etc
         Route::apiResource('categories', CategoryController::class)->except(['index', 'show']);
         Route::apiResource('brands', BrandController::class)->except(['index', 'show']);
+        Route::delete('/products/bulk', [ProductController::class, 'bulkDestroy']);
         Route::apiResource('products', ProductController::class)->except(['index', 'show']);
         Route::apiResource('services', ServiceController::class)->except(['index', 'show']);
         Route::post('/sales/{id}/refund', [SaleController::class, 'refund']);
