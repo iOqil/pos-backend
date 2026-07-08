@@ -32,6 +32,9 @@ class ProductController extends Controller
     #[OA\RequestBody(required: true, content: new OA\JsonContent(required: ["name", "slug", "sku", "price"]))]
     #[OA\Response(response: 201, description: "Product created")]
     public function store(Request $request) {
+        if (!$request->slug && $request->name) {
+            $request->merge(['slug' => \Illuminate\Support\Str::slug($request->name) . '-' . uniqid()]);
+        }
         $data = $request->validate([
             'name' => 'required', 'slug' => 'required|unique:products', 'sku' => 'required|unique:products',
             'price' => 'required|numeric', 'barcode' => 'nullable|string', 'category_id' => 'nullable|exists:categories,id',
