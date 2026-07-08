@@ -33,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('services', ServiceController::class)->except(['index', 'show']);
         Route::post('/sales/{id}/refund', [SaleController::class, 'refund']);
         Route::apiResource('sales', SaleController::class)->only(['destroy']);
+        Route::get('/reports/overview', [ReportController::class, 'overview']);
         Route::get('/reports/daily', [ReportController::class, 'daily']);
         Route::get('/reports/products', [ReportController::class, 'productSales']);
         Route::apiResource('inventory', \App\Http\Controllers\Api\InventoryController::class)->only(['store']);
