@@ -1,1 +1,0 @@
-import{p as a}from"./CBpusyGx.js";const e=a(null),n=()=>({toast:e,show:(t,s="success")=>{e.value={message:t,type:s,id:Date.now()},setTimeout(()=>{e.value?.id===e.value?.id&&(e.value=null)},3e3)},clear:()=>{e.value=null}});export{n as u};
