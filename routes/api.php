@@ -36,7 +36,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/reports/overview', [ReportController::class, 'overview']);
         Route::get('/reports/daily', [ReportController::class, 'daily']);
         Route::get('/reports/products', [ReportController::class, 'productSales']);
-        Route::apiResource('inventory', \App\Http\Controllers\Api\InventoryController::class)->only(['store']);
+        Route::apiResource('inventory', \App\Http\Controllers\Api\InventoryController::class)->only(['store', 'update', 'destroy']);
     });
 
     // Mixed access (Admin + Cashier)

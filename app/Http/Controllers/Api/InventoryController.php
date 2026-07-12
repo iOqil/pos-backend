@@ -68,4 +68,89 @@ class InventoryController extends Controller
             return response()->json(['message' => 'Xatolik yuz berdi'], 500);
         }
     }
+
+    /**
+     * Update an existing stock movement (correct mistakes).
+     */
+    public function update(Request $request, $id)
+    {
+        $data = $request->validate([
+            'quantity' => 'required|integer|not_in:0',
+            'type' => 'required|in:purchase,return,adjustment,write_off',
+            'note' => 'nullable|string'
+        ]);
+
+        $movement = StockMovement::findOrFail($id);
+        $product = Product::findOrFail($movement->product_id);
+
+        DB::beginTransaction();
+        try {
+            // Eski miqdorni qaytarish (bekor qilish)
+            $product->stock_quantity -= $movement->quantity;
+
+            // Yangi miqdorni hisoblash
+            $newQuantity = $data['quantity'];
+            if (in_array($data['type'], ['write_off', 'return'])) {
+                $newQuantity = -abs($newQuantity);
+            } else {
+                $newQuantity = abs($newQuantity);
+            }
+
+            // Tekshirish: yangi miqdor omborda manfiy qoldiq hosil qiladimi?
+            if ($product->stock_quantity + $newQuantity < 0) {
+                DB::rollBack();
+                return response()->json(['message' => 'Omborda yetarli mahsulot yo\'q. Qoldiq: ' . $product->stock_quantity], 400);
+            }
+
+            // Yangi miqdorni qo'shish
+            $product->stock_quantity += $newQuantity;
+            $product->save();
+
+            // Movement ni yangilash
+            $movement->update([
+                'quantity' => $newQuantity,
+                'type' => $data['type'],
+                'note' => $data['note'] ?? $movement->note,
+            ]);
+
+            DB::commit();
+
+            return response()->json($movement->load('product'));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Inventory update error: ' . $e->getMessage());
+            return response()->json(['message' => 'Xatolik yuz berdi'], 500);
+        }
+    }
+
+    /**
+     * Delete a stock movement and reverse its effect on stock.
+     */
+    public function destroy($id)
+    {
+        $movement = StockMovement::findOrFail($id);
+        $product = Product::findOrFail($movement->product_id);
+
+        DB::beginTransaction();
+        try {
+            // Harakatni bekor qilish — eski miqdorni qaytarish
+            $product->stock_quantity -= $movement->quantity;
+            
+            if ($product->stock_quantity < 0) {
+                DB::rollBack();
+                return response()->json(['message' => 'O\'chirish mumkin emas — omborda manfiy qoldiq hosil bo\'ladi'], 400);
+            }
+
+            $product->save();
+            $movement->delete();
+
+            DB::commit();
+
+            return response()->json(['message' => 'Harakat o\'chirildi va ombor yangilandi']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Inventory delete error: ' . $e->getMessage());
+            return response()->json(['message' => 'Xatolik yuz berdi'], 500);
+        }
+    }
 }
