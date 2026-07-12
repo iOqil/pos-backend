@@ -31,7 +31,8 @@ class BrandController extends Controller
     #[OA\Response(response: 200, description: "Brand updated")]
     public function update(Request $request, $id) {
         $brand = Brand::findOrFail($id);
-        $brand->update($request->all());
+        $request->validate(['name' => 'required|string|max:255']);
+        $brand->update($request->only(['name']));
         return response()->json($brand);
     }
 

@@ -27,9 +27,12 @@ class UserController extends Controller
     #[OA\Response(response: 201, description: "User created")]
     public function store(Request $request) {
         $data = $request->validate([
-            'name' => 'required|string', 'email' => 'required|email|unique:users', 'password' => 'required|string|min:6', 'role' => 'required|string', 'phone' => 'nullable|string'
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|string|min:6',
+            'role' => 'required|in:admin,manager,cashier',
+            'phone' => 'nullable|string'
         ]);
-        $data['password'] = Hash::make($data['password']);
         return response()->json(User::create($data), 201);
     }
 
@@ -44,8 +47,17 @@ class UserController extends Controller
     #[OA\Response(response: 200, description: "User updated")]
     public function update(Request $request, $id) {
         $user = User::findOrFail($id);
-        $data = $request->all();
-        if(isset($data['password'])) { $data['password'] = Hash::make($data['password']); }
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $id,
+            'role' => 'required|in:admin,manager,cashier',
+            'password' => 'nullable|string|min:6',
+            'is_active' => 'boolean'
+        ]);
+        $data = $request->only(['name', 'email', 'role', 'is_active']);
+        if ($request->filled('password')) {
+            $data['password'] = $request->password;
+        }
         $user->update($data);
         return response()->json($user);
     }

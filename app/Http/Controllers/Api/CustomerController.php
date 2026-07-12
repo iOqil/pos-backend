@@ -30,7 +30,10 @@ class CustomerController extends Controller
     #[OA\RequestBody(required: true, content: new OA\JsonContent())]
     #[OA\Response(response: 200, description: "Updated")]
     public function update(Request $request, $id) {
-        $c = Customer::findOrFail($id); $c->update($request->all()); return response()->json($c);
+        $c = Customer::findOrFail($id);
+        $request->validate(['name' => 'required|string|max:255', 'phone' => 'nullable|string', 'email' => 'nullable|email', 'address' => 'nullable|string']);
+        $c->update($request->only(['name', 'phone', 'email', 'address']));
+        return response()->json($c);
     }
 
     #[OA\Get(path: "/api/customers/search", summary: "Search customers", security: [["sanctum" => []]], tags: ["Customers"])]

@@ -33,7 +33,10 @@ class ServiceController extends Controller
     #[OA\RequestBody(required: true, content: new OA\JsonContent())]
     #[OA\Response(response: 200, description: "Service updated")]
     public function update(Request $request, $id) {
-        $s = Service::findOrFail($id); $s->update($request->all()); return response()->json($s);
+        $s = Service::findOrFail($id);
+        $request->validate(['name' => 'required|string', 'slug' => 'nullable|string', 'type' => 'nullable|string', 'price' => 'nullable|numeric', 'commission_type' => 'nullable|in:fixed,percentage', 'commission_value' => 'nullable|numeric']);
+        $s->update($request->only(['name', 'slug', 'type', 'price', 'description', 'commission_type', 'commission_value', 'is_active']));
+        return response()->json($s);
     }
 
     #[OA\Delete(path: "/api/services/{id}", summary: "Delete service", security: [["sanctum" => []]], tags: ["Services"])]

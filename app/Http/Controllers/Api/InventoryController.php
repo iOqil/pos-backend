@@ -65,7 +65,7 @@ class InventoryController extends Controller
             return response()->json($movement, 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Error processing inventory: ' . $e->getMessage()], 500);
+            return response()->json(['message' => 'Xatolik yuz berdi'], 500);
         }
     }
 }

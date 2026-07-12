@@ -61,9 +61,18 @@ class ProductController extends Controller
     public function update(Request $request, $id) {
         $product = Product::findOrFail($id);
         
-        // When using FormData with PUT, PHP often has issues parsing files. 
-        // We use POST with _method=PUT to handle file uploads in update.
-        $data = $request->except(['image']);
+        $request->validate([
+            'name' => 'sometimes|required|string',
+            'price' => 'sometimes|required|numeric',
+            'barcode' => 'nullable|string',
+            'category_id' => 'nullable|exists:categories,id',
+            'brand_id' => 'nullable|exists:brands,id',
+            'stock_quantity' => 'nullable|integer',
+            'cost_price' => 'nullable|numeric',
+            'image' => 'nullable|image|max:2048'
+        ]);
+
+        $data = $request->only(['name', 'slug', 'sku', 'price', 'barcode', 'category_id', 'brand_id', 'stock_quantity', 'cost_price', 'description', 'is_active']);
         
         if ($request->hasFile('image')) {
             if ($product->image) {

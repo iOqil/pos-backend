@@ -47,9 +47,16 @@ class SaleController extends Controller
             $subtotal = 0;
             $itemsData = [];
             foreach ($request->items as $item) {
-                $product = \App\Models\Product::find($item['product_id']);
+                $product = \App\Models\Product::lockForUpdate()->find($item['product_id']);
+                if (!$product) {
+                    throw new \Exception("Mahsulot topilmadi: ID {$item['product_id']}");
+                }
+                if ($product->stock_quantity < $item['quantity']) {
+                    throw new \Exception("'{$product->name}' omborda yetarli emas. Qoldiq: {$product->stock_quantity}");
+                }
+                $serverPrice = $product->price;
                 $itemDiscount = $item['discount'] ?? 0;
-                $itemTotal = ($item['unit_price'] * $item['quantity']) - $itemDiscount;
+                $itemTotal = ($serverPrice * $item['quantity']) - $itemDiscount;
                 $subtotal += $itemTotal;
                 
                 $itemsData[] = new \App\Models\SaleItem([
@@ -57,7 +64,7 @@ class SaleController extends Controller
                     'product_name' => $product->name,
                     'product_barcode' => $product->barcode,
                     'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'],
+                    'unit_price' => $serverPrice,
                     'discount' => $itemDiscount,
                     'total' => $itemTotal
                 ]);
@@ -115,7 +122,8 @@ class SaleController extends Controller
             ], 201);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\DB::rollBack();
-            return response()->json(['message' => 'Error processing sale: ' . $e->getMessage()], 500);
+            \Log::error('Sale processing error: ' . $e->getMessage());
+            return response()->json(['message' => $e->getMessage()], 500);
         }
     }
 
@@ -128,8 +136,22 @@ class SaleController extends Controller
     #[OA\PathParameter(name: "id", required: true, schema: new OA\Schema(type: "integer"))]
     #[OA\Response(response: 200, description: "Refunded")]
     public function refund($id) {
-        $sale = Sale::findOrFail($id);
-        $sale->update(['status' => 'refunded']);
-        return response()->json(['message' => 'Refund processed']);
+        $sale = Sale::with('items')->findOrFail($id);
+        if ($sale->status === 'refunded') {
+            return response()->json(['message' => 'Bu savdo allaqachon qaytarilgan'], 422);
+        }
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            foreach ($sale->items as $item) {
+                \App\Models\Product::where('id', $item->product_id)->increment('stock_quantity', $item->quantity);
+            }
+            $sale->update(['status' => 'refunded']);
+            \Illuminate\Support\Facades\DB::commit();
+            return response()->json(['message' => 'Qaytarish amalga oshirildi, tovarlar omborga qaytarildi']);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Log::error('Refund error: ' . $e->getMessage());
+            return response()->json(['message' => 'Xatolik yuz berdi'], 500);
+        }
     }
 }

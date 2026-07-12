@@ -42,7 +42,8 @@ class CategoryController extends Controller
     #[OA\Response(response: 200, description: "Category updated")]
     public function update(Request $request, $id) {
         $cat = Category::findOrFail($id);
-        $cat->update($request->all());
+        $request->validate(['name' => 'required|string|max:255', 'parent_id' => 'nullable|exists:categories,id']);
+        $cat->update($request->only(['name', 'parent_id']));
         return response()->json($cat);
     }
 
