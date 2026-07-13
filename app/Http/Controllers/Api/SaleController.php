@@ -43,7 +43,9 @@ class SaleController extends Controller
 
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
-            $saleNumber = 'SALE-' . strtoupper(uniqid());
+            do {
+                $saleNumber = (string)random_int(100000, 999999);
+            } while (\App\Models\Sale::where('sale_number', $saleNumber)->exists());
             
             $subtotal = 0;
             $itemsData = [];

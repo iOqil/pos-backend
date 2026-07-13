@@ -20,9 +20,15 @@ class CustomerController extends Controller
 
         $perPage = $request->per_page ?? 20;
         $customers = $query->withCount('sales')
-            ->withSum(['debts as active_debt' => function($q) { $q->where('status', 'active'); }], \DB::raw('amount - paid_amount'))
+            ->withSum(['debts as total_debt' => function($q) { $q->where('status', 'active'); }], 'amount')
+            ->withSum(['debts as total_paid' => function($q) { $q->where('status', 'active'); }], 'paid_amount')
             ->orderBy('name')
             ->paginate($perPage);
+            
+        $customers->getCollection()->transform(function($c) {
+            $c->active_debt = ($c->total_debt ?? 0) - ($c->total_paid ?? 0);
+            return $c;
+        });
         
         return response()->json($customers);
     }
@@ -48,8 +54,11 @@ class CustomerController extends Controller
             $q->latest();
         }])
         ->withCount('sales')
-        ->withSum(['debts as active_debt' => function($q) { $q->where('status', 'active'); }], \DB::raw('amount - paid_amount'))
+        ->withSum(['debts as total_debt' => function($q) { $q->where('status', 'active'); }], 'amount')
+        ->withSum(['debts as total_paid' => function($q) { $q->where('status', 'active'); }], 'paid_amount')
         ->findOrFail($id);
+        
+        $customer->active_debt = ($customer->total_debt ?? 0) - ($customer->total_paid ?? 0);
 
         // Statistikalar
         $stats = [
