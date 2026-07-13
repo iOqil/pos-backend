@@ -25,6 +25,11 @@ class ProductController extends Controller
             $query->where('category_id', $request->category_id);
         }
 
+        if ($request->has('low_stock')) {
+            $threshold = \App\Models\Setting::get('low_stock_threshold', 5);
+            $query->where('stock_quantity', '<=', $threshold)->where('stock_quantity', '>', 0);
+        }
+
         $perPage = $request->per_page ?? 15;
         return response()->json($query->orderBy('created_at', 'desc')->paginate($perPage)); 
     }

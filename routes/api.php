@@ -25,18 +25,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::apiResource('users', UserController::class);
         
-        // Write access for products, categories, etc
-        Route::apiResource('categories', CategoryController::class)->except(['index', 'show']);
-        Route::apiResource('brands', BrandController::class)->except(['index', 'show']);
+        // Admin only delete routes
+        Route::apiResource('categories', CategoryController::class)->only(['destroy']);
+        Route::apiResource('brands', BrandController::class)->only(['destroy']);
         Route::delete('/products/bulk', [ProductController::class, 'bulkDestroy']);
-        Route::apiResource('products', ProductController::class)->except(['index', 'show']);
-        Route::apiResource('services', ServiceController::class)->except(['index', 'show']);
-        Route::post('/sales/{id}/refund', [SaleController::class, 'refund']);
+        Route::apiResource('products', ProductController::class)->only(['destroy']);
+        Route::apiResource('services', ServiceController::class)->only(['destroy']);
+        
         Route::apiResource('sales', SaleController::class)->only(['destroy']);
+        
         Route::get('/reports/overview', [ReportController::class, 'overview']);
         Route::get('/reports/daily', [ReportController::class, 'daily']);
         Route::get('/reports/products', [ReportController::class, 'productSales']);
-        Route::apiResource('inventory', \App\Http\Controllers\Api\InventoryController::class)->only(['store', 'update', 'destroy']);
+        
+        Route::apiResource('inventory', \App\Http\Controllers\Api\InventoryController::class)->only(['destroy']);
 
         // Nasiya (Debts)
         Route::get('/debts', [\App\Http\Controllers\Api\DebtController::class, 'index']);
@@ -54,14 +56,18 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Mixed access (Admin + Cashier)
-    Route::apiResource('categories', CategoryController::class)->only(['index', 'show']);
-    Route::apiResource('brands', BrandController::class)->only(['index', 'show']);
+    Route::apiResource('categories', CategoryController::class)->except(['destroy']);
+    Route::apiResource('brands', BrandController::class)->except(['destroy']);
     Route::get('/products/barcode/{barcode}', [ProductController::class, 'getByBarcode']);
-    Route::apiResource('products', ProductController::class)->only(['index', 'show']);
+    Route::apiResource('products', ProductController::class)->except(['destroy']);
+    
     Route::get('/customers/search', [CustomerController::class, 'search']);
     Route::apiResource('customers', CustomerController::class)->except(['destroy']);
-    Route::apiResource('sales', SaleController::class)->only(['index', 'show', 'store']);
-    Route::apiResource('services', ServiceController::class)->only(['index', 'show']);
+    
+    Route::post('/sales/{id}/refund', [SaleController::class, 'refund']);
+    Route::apiResource('sales', SaleController::class)->except(['destroy']);
+    
+    Route::apiResource('services', ServiceController::class)->except(['destroy']);
     Route::apiResource('service-transactions', ServiceTransactionController::class)->only(['index', 'store']);
-    Route::apiResource('inventory', \App\Http\Controllers\Api\InventoryController::class)->only(['index']);
+    Route::apiResource('inventory', \App\Http\Controllers\Api\InventoryController::class)->except(['destroy']);
 });
