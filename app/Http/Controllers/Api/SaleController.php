@@ -33,6 +33,7 @@ class SaleController extends Controller
             'payment_method' => 'required|string',
             'amount_paid' => 'nullable|numeric',
             'discount_amount' => 'nullable|numeric',
+            'due_date' => 'nullable|date',
             'customer_id' => 'nullable|exists:customers,id',
             'items' => 'required|array',
             'items.*.product_id' => 'required|exists:products,id',
@@ -124,6 +125,7 @@ class SaleController extends Controller
                     'sale_id' => $sale->id,
                     'amount' => $total,
                     'note' => 'Sotuv: ' . $saleNumber,
+                    'due_date' => $request->due_date,
                 ]);
             } else {
                 \App\Models\Payment::create([
