@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Service;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use OpenApi\Attributes as OA;
 
 class ServiceController extends Controller
@@ -24,7 +25,31 @@ class ServiceController extends Controller
     #[OA\RequestBody(required: true, content: new OA\JsonContent(required: ["name", "slug"]))]
     #[OA\Response(response: 201, description: "Service created")]
     public function store(Request $request) {
-        $data = $request->validate(['name' => 'required', 'slug' => 'required|unique:services', 'type' => 'required']);
+        $data = $request->validate([
+            'name' => 'required|string',
+            'slug' => 'nullable|string|unique:services',
+            'type' => 'nullable|string',
+            'price' => 'nullable|numeric',
+            'description' => 'nullable|string',
+            'commission_type' => 'nullable|in:fixed,percentage',
+            'commission_value' => 'nullable|numeric'
+        ]);
+
+        if (empty($data['slug'])) {
+            $data['slug'] = Str::slug($data['name']);
+            // check unique
+            $originalSlug = $data['slug'];
+            $counter = 1;
+            while (Service::where('slug', $data['slug'])->exists()) {
+                $data['slug'] = $originalSlug . '-' . $counter;
+                $counter++;
+            }
+        }
+        
+        if (empty($data['type'])) {
+            $data['type'] = 'standard';
+        }
+
         return response()->json(Service::create($data), 201);
     }
     
