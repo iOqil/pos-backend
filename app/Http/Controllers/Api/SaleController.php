@@ -31,8 +31,9 @@ class SaleController extends Controller
     public function store(Request $request) {
         $request->validate([
             'payment_method' => 'required|string',
-            'amount_paid' => 'required|numeric',
+            'amount_paid' => 'nullable|numeric',
             'discount_amount' => 'nullable|numeric',
+            'customer_id' => 'nullable|exists:customers,id',
             'items' => 'required|array',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|numeric|min:1',
@@ -94,7 +95,7 @@ class SaleController extends Controller
                         'sale_id' => $sale->id,
                         'method' => 'cash',
                         'amount' => $request->cash_amount,
-                        'change_amount' => max(0, $request->cash_amount + $request->card_amount - $total),
+                        'change_amount' => max(0, $request->cash_amount + ($request->card_amount ?? 0) - $total),
                     ]);
                 }
                 if ($request->card_amount > 0) {
@@ -105,16 +106,59 @@ class SaleController extends Controller
                         'change_amount' => 0,
                     ]);
                 }
+            } elseif ($request->payment_method === 'debt') {
+                // Nasiyaga berish
+                if (!$request->customer_id) {
+                    throw new \Exception('Nasiyaga berish uchun mijoz tanlash shart');
+                }
+                \App\Models\Payment::create([
+                    'sale_id' => $sale->id,
+                    'method' => 'debt',
+                    'amount' => $total,
+                    'change_amount' => 0,
+                ]);
+                \App\Models\Debt::create([
+                    'customer_id' => $request->customer_id,
+                    'sale_id' => $sale->id,
+                    'amount' => $total,
+                    'note' => 'Sotuv: ' . $saleNumber,
+                ]);
             } else {
                 \App\Models\Payment::create([
                     'sale_id' => $sale->id,
                     'method' => $request->payment_method,
-                    'amount' => $request->amount_paid,
-                    'change_amount' => max(0, $request->amount_paid - $total),
+                    'amount' => $request->amount_paid ?? $total,
+                    'change_amount' => max(0, ($request->amount_paid ?? $total) - $total),
                 ]);
             }
 
+            // Mijoz total_spent yangilash (nasiya bo'lmasa)
+            if ($request->customer_id && $request->payment_method !== 'debt') {
+                $customer = \App\Models\Customer::find($request->customer_id);
+                if ($customer) {
+                    $customer->increment('total_spent', $total);
+                }
+            }
+
             \Illuminate\Support\Facades\DB::commit();
+
+            // Telegram bildirishnoma (tranzaksiyadan tashqarida)
+            try {
+                $sale->load(['items', 'customer', 'cashier', 'payments']);
+                $telegram = new \App\Services\TelegramService();
+                $telegram->sendSaleNotification($sale);
+
+                // Kam qolgan tovarlarni tekshirish
+                $threshold = \App\Models\Setting::get('low_stock_threshold', 5);
+                $lowStock = \App\Models\Product::where('stock_quantity', '<=', $threshold)
+                    ->where('stock_quantity', '>', 0)->get();
+                if ($lowStock->isNotEmpty()) {
+                    $telegram->sendLowStockAlert($lowStock);
+                }
+            } catch (\Exception $e) {
+                // Telegram xatosi sotuv jarayonini to'xtatmasligi kerak
+                \Log::warning('Telegram notification failed: ' . $e->getMessage());
+            }
 
             return response()->json([
                 'message' => 'Sale processed successfully',

@@ -37,6 +37,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/reports/daily', [ReportController::class, 'daily']);
         Route::get('/reports/products', [ReportController::class, 'productSales']);
         Route::apiResource('inventory', \App\Http\Controllers\Api\InventoryController::class)->only(['store', 'update', 'destroy']);
+
+        // Nasiya (Debts)
+        Route::get('/debts', [\App\Http\Controllers\Api\DebtController::class, 'index']);
+        Route::post('/debts', [\App\Http\Controllers\Api\DebtController::class, 'store']);
+        Route::post('/debts/{id}/pay', [\App\Http\Controllers\Api\DebtController::class, 'pay']);
+        Route::delete('/debts/{id}', [\App\Http\Controllers\Api\DebtController::class, 'destroy']);
+
+        // Telegram sozlamalari
+        Route::get('/telegram/settings', [\App\Http\Controllers\Api\TelegramController::class, 'getSettings']);
+        Route::post('/telegram/settings', [\App\Http\Controllers\Api\TelegramController::class, 'saveSettings']);
+        Route::post('/telegram/test', [\App\Http\Controllers\Api\TelegramController::class, 'test']);
+
+        // Mijozlarni o'chirish (faqat admin)
+        Route::delete('/customers/{id}', [CustomerController::class, 'destroy']);
     });
 
     // Mixed access (Admin + Cashier)
@@ -45,7 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/products/barcode/{barcode}', [ProductController::class, 'getByBarcode']);
     Route::apiResource('products', ProductController::class)->only(['index', 'show']);
     Route::get('/customers/search', [CustomerController::class, 'search']);
-    Route::apiResource('customers', CustomerController::class);
+    Route::apiResource('customers', CustomerController::class)->except(['destroy']);
     Route::apiResource('sales', SaleController::class)->only(['index', 'show', 'store']);
     Route::apiResource('services', ServiceController::class)->only(['index', 'show']);
     Route::apiResource('service-transactions', ServiceTransactionController::class)->only(['index', 'store']);

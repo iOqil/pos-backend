@@ -4,43 +4,103 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use Illuminate\Http\Request;
-use OpenApi\Attributes as OA;
 
 class CustomerController extends Controller
 {
-    #[OA\Get(path: "/api/customers", summary: "Get customers", security: [["sanctum" => []]], tags: ["Customers"])]
-    #[OA\Response(response: 200, description: "Customers retrieved")]
-    public function index() { return response()->json(Customer::all()); }
+    public function index(Request $request) 
+    {
+        $query = Customer::query();
+        
+        if ($request->search) {
+            $query->where(function($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('phone', 'like', '%' . $request->search . '%');
+            });
+        }
 
-    #[OA\Post(path: "/api/customers", summary: "Create customer", security: [["sanctum" => []]], tags: ["Customers"])]
-    #[OA\RequestBody(required: true, content: new OA\JsonContent(required: ["name", "phone"]))]
-    #[OA\Response(response: 201, description: "Created")]
-    public function store(Request $request) {
-        $data = $request->validate(['name' => 'required', 'phone' => 'required|unique:customers']);
+        $perPage = $request->per_page ?? 20;
+        $customers = $query->withCount('sales')
+            ->withSum(['debts as active_debt' => function($q) { $q->where('status', 'active'); }], \DB::raw('amount - paid_amount'))
+            ->orderBy('name')
+            ->paginate($perPage);
+        
+        return response()->json($customers);
+    }
+
+    public function store(Request $request) 
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|unique:customers,phone',
+            'email' => 'nullable|email',
+            'address' => 'nullable|string',
+            'birth_date' => 'nullable|date'
+        ]);
+        
         return response()->json(Customer::create($data), 201);
     }
 
-    #[OA\Get(path: "/api/customers/{id}", summary: "Get customer", security: [["sanctum" => []]], tags: ["Customers"])]
-    #[OA\PathParameter(name: "id", required: true, schema: new OA\Schema(type: "integer"))]
-    #[OA\Response(response: 200, description: "Customer retrieved")]
-    public function show($id) { return response()->json(Customer::findOrFail($id)); }
+    public function show($id) 
+    { 
+        $customer = Customer::with(['sales' => function($q) {
+            $q->with(['items', 'payments', 'cashier'])->latest()->take(20);
+        }, 'debts' => function($q) {
+            $q->latest();
+        }])
+        ->withCount('sales')
+        ->withSum(['debts as active_debt' => function($q) { $q->where('status', 'active'); }], \DB::raw('amount - paid_amount'))
+        ->findOrFail($id);
 
-    #[OA\Put(path: "/api/customers/{id}", summary: "Update customer", security: [["sanctum" => []]], tags: ["Customers"])]
-    #[OA\PathParameter(name: "id", required: true, schema: new OA\Schema(type: "integer"))]
-    #[OA\RequestBody(required: true, content: new OA\JsonContent())]
-    #[OA\Response(response: 200, description: "Updated")]
-    public function update(Request $request, $id) {
+        // Statistikalar
+        $stats = [
+            'total_sales' => $customer->sales_count,
+            'total_spent' => $customer->total_spent,
+            'active_debt' => $customer->active_debt ?? 0,
+            'last_purchase' => $customer->sales()->latest()->value('created_at'),
+        ];
+
+        return response()->json([
+            'customer' => $customer,
+            'stats' => $stats
+        ]);
+    }
+
+    public function update(Request $request, $id) 
+    {
         $c = Customer::findOrFail($id);
-        $request->validate(['name' => 'required|string|max:255', 'phone' => 'nullable|string', 'email' => 'nullable|email', 'address' => 'nullable|string']);
-        $c->update($request->only(['name', 'phone', 'email', 'address']));
+        $request->validate([
+            'name' => 'required|string|max:255', 
+            'phone' => 'required|string|unique:customers,phone,' . $id, 
+            'email' => 'nullable|email', 
+            'address' => 'nullable|string',
+            'birth_date' => 'nullable|date'
+        ]);
+        $c->update($request->only(['name', 'phone', 'email', 'address', 'birth_date']));
         return response()->json($c);
     }
 
-    #[OA\Get(path: "/api/customers/search", summary: "Search customers", security: [["sanctum" => []]], tags: ["Customers"])]
-    #[OA\QueryParameter(name: "phone", required: true, schema: new OA\Schema(type: "string"))]
-    #[OA\Response(response: 200, description: "Customers found")]
-    public function search(Request $request) {
-        $query = $request->get('phone');
-        return response()->json(Customer::where('phone', 'like', "%{$query}%")->get());
+    public function destroy($id)
+    {
+        $customer = Customer::findOrFail($id);
+        
+        // Aktiv nasiyasi bor mijozni o'chirish mumkin emas
+        $activeDebt = $customer->debts()->where('status', 'active')->exists();
+        if ($activeDebt) {
+            return response()->json(['message' => 'Aktiv nasiyasi bor mijozni o\'chirish mumkin emas'], 422);
+        }
+
+        $customer->delete();
+        return response()->json(['message' => 'Mijoz o\'chirildi']);
+    }
+
+    public function search(Request $request) 
+    {
+        $query = $request->get('q') ?? $request->get('phone');
+        return response()->json(
+            Customer::where('phone', 'like', "%{$query}%")
+                ->orWhere('name', 'like', "%{$query}%")
+                ->limit(10)
+                ->get()
+        );
     }
 }
